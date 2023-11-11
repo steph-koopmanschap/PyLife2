@@ -16,8 +16,6 @@ def calc_distance(point1: list, point2: list) -> int:
     distance = np.linalg.norm(point1 - point2)
     # We use max(1, dist) because the min size is 1 pixel
     return max(1, distance)
-
-
     
 def generate_exponential_numbers(min_value, max_value, total_numbers, desired_range=800):
     # Generate random numbers with an exponential distribution

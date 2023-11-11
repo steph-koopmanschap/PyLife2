@@ -1,7 +1,7 @@
 import pygame
 #from pygame.math import Vector2
 import sys
-from constants import BLACK, FPS, WINDOW_WIDTH, WINDOW_HEIGHT
+from constants import COLORS, FPS, WINDOW_WIDTH, WINDOW_HEIGHT
 from models import all_sprites
 from generate_world import generate_world
 
@@ -14,7 +14,7 @@ pygame.display.set_caption("PyLife2")
 
 # Clear the screen
 def clear_screen():
-    window.fill(BLACK)
+    window.fill(COLORS["BLACK"])
     #window.fill((4, 217, 255)) # Light blue
     #window.fill((255, 255, 255))
 
