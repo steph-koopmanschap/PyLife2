@@ -3,7 +3,7 @@ import json
 import pygame
 #from pygame.math import Vector2
 from constants import COLORS, FPS, WINDOW_WIDTH, WINDOW_HEIGHT
-from models import all_sprites
+from models import all_sprites, species
 from generate_world import generate_world
 from utils import update_tracker, log_tracker
 from globals import APP
@@ -48,15 +48,17 @@ def main_loop():
 # Start the simulation
 def start():
     generate_world()
-    update_tracker()
+    update_tracker(species, all_sprites)
     # Create the tracker file
     tracker_file_dict = {
         "track_data": []
     }
     file_timestamp = APP['sim_start_time'].strftime("%H:%M:%S %d-%m-%y")
+    folder = "sim_statistics_data"
     filename = f'sim_tracker_{file_timestamp}.json'
-    APP["current_log_file"] = filename
-    with open(filename, 'w') as file:
+    path = f'{folder}/{filename}'
+    APP["current_log_file"] = path
+    with open(path, 'w') as file:
         json.dump(tracker_file_dict, file, indent=4)
     # Write the initial tracking data
     log_tracker()

@@ -5,7 +5,6 @@ import copy
 import pygame
 import numpy as np
 from globals import APP
-from models import species, all_sprites
 
 # Generates a random number between min and max,
 # With a higher probability around the midpoint between min and max
@@ -71,7 +70,7 @@ def save_organism_definitions(organisms: dict):
     print("File saved.")
 
 # Update statistics in tracker
-def update_tracker():
+def update_tracker(species, all_sprites):
     for key in APP['tracker']:
         specie = key[key.find("_") + 1:]
         if specie in species:
