@@ -2,11 +2,15 @@ import math
 import random
 import uuid
 import pygame
+from globals import APP
 from constants import WINDOW_WIDTH, WINDOW_HEIGHT
-from utils import calc_new_paramater, calc_distance
+from utils import load_organism_definitions, random_with_bias, calc_distance
 
 # Sprite groups
 all_sprites = pygame.sprite.Group()
+
+pre_defined_organisms = load_organism_definitions()
+species = [organism['species'] for organism_definition, organism in pre_defined_organisms.items()]
 
 class Organism(pygame.sprite.Sprite):
     def __init__(self, params, position):
@@ -19,14 +23,14 @@ class Organism(pygame.sprite.Sprite):
         # These are internal variables that can potentially change over time.
         # Note: We probably can only use floats and integers here
         self.current_state = {
-            "width": calc_new_paramater(params["min_width"], params["max_width"]),
-            "height": calc_new_paramater(params["min_height"], params["max_height"]),
-            "current_vision_range": calc_new_paramater(params["min_vision_range"], params["max_vision_range"]),
+            "width": random_with_bias(params["min_width"], params["max_width"]),
+            "height": random_with_bias(params["min_height"], params["max_height"]),
+            "current_vision_range": random_with_bias(params["min_vision_range"], params["max_vision_range"]),
             "current_speed": 0.0,
             "current_energy": params["max_energy"] * 0.5,
-            "current_energy_loss_rate": calc_new_paramater(params["min_energy_loss_rate"], params["max_energy_loss_rate"]),
-            "current_reproduction_rate": calc_new_paramater(params["min_reproduction_rate"], params["max_reproduction_rate"]),
-            "lifespan": calc_new_paramater(params["min_lifespan"], params["max_lifespan"]),
+            "current_energy_loss_rate": random_with_bias(params["min_energy_loss_rate"], params["max_energy_loss_rate"]),
+            "current_reproduction_rate": random_with_bias(params["min_reproduction_rate"], params["max_reproduction_rate"]),
+            "lifespan": random_with_bias(params["min_lifespan"], params["max_lifespan"]),
             "predator_detected_time": 0.0, # The time at which the predator was detected
             "creation_time": pygame.time.get_ticks(),
             "last_energy_update_time": pygame.time.get_ticks(),
@@ -47,10 +51,12 @@ class Organism(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = position[0] #random.randrange(WINDOW_WIDTH - width)
         self.rect.y = position[1] #random.randrange(WINDOW_HEIGHT - height)
+        # Tracking
+        APP['tracker'][f"total_{self.params['species']}"] += 1
         # OUTDATED ?
         self.move_direction = random.uniform(0, 2 * math.pi)
         self.move_timer = pygame.time.get_ticks() + random.randint(1000, 3000)
-    
+        
     # Update itself
     def update(self):
         self.screen_wrap()
@@ -191,4 +197,5 @@ class Organism(pygame.sprite.Sprite):
     def die(self):
         # Death happens if energy level < 0 (starvation) or the organism reached its lifespan
         if self.current_state["current_energy"] <= 0 or pygame.time.get_ticks() - self.current_state["creation_time"] > self.current_state["lifespan"]:
+            APP['tracker'][f"total_{self.params['species']}"] -= 1
             self.kill()

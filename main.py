@@ -1,14 +1,17 @@
+import sys
+import json
 import pygame
 #from pygame.math import Vector2
-import sys
 from constants import COLORS, FPS, WINDOW_WIDTH, WINDOW_HEIGHT
 from models import all_sprites
 from generate_world import generate_world
+from utils import update_tracker, log_tracker
+from globals import APP
 
 pygame.init()
 clock = pygame.time.Clock()
 
-# Create the game window
+# Create the program window
 window = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 pygame.display.set_caption("PyLife2")
 
@@ -16,18 +19,18 @@ pygame.display.set_caption("PyLife2")
 def clear_screen():
     window.fill(COLORS["BLACK"])
     #window.fill((4, 217, 255)) # Light blue
-    #window.fill((255, 255, 255))
+    #window.fill((255, 255, 255)) # White
 
-# Update game logic here
+# Update simulation logic here
 def update():
     all_sprites.update()
 
-# Draw game elements here
+# Draw simulation elements here
 def draw():
     all_sprites.draw(window)
 
-# Game loop
-def game_loop():
+# Main program loop
+def main_loop():
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -42,8 +45,22 @@ def game_loop():
         pygame.display.update()
         clock.tick(FPS)
 
+# Start the simulation
 def start():
     generate_world()
-    game_loop()
+    update_tracker()
+    # Create the tracker file
+    tracker_file_dict = {
+        "track_data": []
+    }
+    file_timestamp = APP['sim_start_time'].strftime("%H:%M:%S %d-%m-%y")
+    filename = f'sim_tracker_{file_timestamp}.json'
+    APP["current_log_file"] = filename
+    with open(filename, 'w') as file:
+        json.dump(tracker_file_dict, file, indent=4)
+    # Write the initial tracking data
+    log_tracker()
+    # Start the main loop
+    main_loop()
 
 start()

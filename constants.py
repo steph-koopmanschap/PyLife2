@@ -1,8 +1,11 @@
-# CONSTANTS
+# Constants are global variables that can not be changed.
 
-# Set up the dimensions of the game window
+# Set up the dimensions of the simulation window
 WINDOW_WIDTH = 1024
 WINDOW_HEIGHT = 800
+# Set up the dimensions of the simulation world (not used yet)
+WORLD_WIDTH = 1024
+WORLD_HEIGHT = 800
 # Game loop variables
 FPS = 60  # Frames per second
 # Colors
