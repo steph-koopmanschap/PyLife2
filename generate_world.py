@@ -1,6 +1,7 @@
 import math
 import random
 import datetime
+import pygame
 from models import Organism, all_sprites, species, pre_defined_organisms as Organisms
 from constants import WINDOW_WIDTH, WINDOW_HEIGHT
 from globals import APP
@@ -10,6 +11,7 @@ def generate_world():
     print("Initializing the simulation world.")
     # Add tracking data to the simulation
     APP['sim_start_time'] = datetime.datetime.now()
+    APP['sim_start_time_ticks'] = pygame.time.get_ticks()
     for specie in species:
         APP['tracker'][f"total_{specie}"] = 0
     APP['tracker']['total_species'] = len(Organisms)

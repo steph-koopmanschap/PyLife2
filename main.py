@@ -1,5 +1,6 @@
 import sys
 import json
+import time
 import pygame
 #from pygame.math import Vector2
 from constants import COLORS, FPS, WINDOW_WIDTH, WINDOW_HEIGHT
@@ -9,7 +10,6 @@ from utils import update_tracker, log_tracker
 from globals import APP
 
 pygame.init()
-clock = pygame.time.Clock()
 
 # Create the program window
 window = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
@@ -31,6 +31,8 @@ def draw():
 
 # Main program loop
 def main_loop():
+    clock = pygame.time.Clock()
+    time_since_last_logging = pygame.time.get_ticks()
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -44,6 +46,15 @@ def main_loop():
         # Update the display
         pygame.display.update()
         clock.tick(FPS)
+        
+        # Log statistics to file every 5 seconds
+        elapsed_time = pygame.time.get_ticks() - time_since_last_logging
+        if elapsed_time >= APP['logging_rate']:
+            update_tracker(species, all_sprites)
+            log_tracker()
+            # Update the time_since_last_logging for the next interval
+            time_since_last_logging = pygame.time.get_ticks()
+
 
 # Start the simulation
 def start():

@@ -71,15 +71,21 @@ def save_organism_definitions(organisms: dict):
 
 # Update statistics in tracker
 def update_tracker(species, all_sprites):
+    # First reset some values
+    APP['tracker']['total_organisms'] = 0
+    APP['tracker']['total_current_energy'] = 0
+    APP['tracker']['average_current_energy'] = 0
     for key in APP['tracker']:
         specie = key[key.find("_") + 1:]
         if specie in species:
             APP['tracker']['total_organisms'] += APP['tracker'][key]
+            #APP['tracker']['total_organisms'] = len(all_sprites)
         elif key == "total_current_energy":
             for org in all_sprites:
                 APP['tracker']['total_current_energy'] += org.current_state["current_energy"]
         elif key == "average_current_energy":
-            APP['tracker']['average_current_energy'] = APP['tracker']['total_current_energy'] / len(all_sprites)
+            APP['tracker']['average_current_energy'] = round(APP['tracker']['total_current_energy'] / len(all_sprites), 4)
+            #APP['tracker']['average_current_energy'] = round(APP['tracker']['total_current_energy'] / APP['tracker']['total_organisms']), 4)
 
 # Save statistics to a file
 def log_tracker():
@@ -88,14 +94,23 @@ def log_tracker():
     with open(APP["current_log_file"], 'r') as file:
         data = json.load(file)
     # Create a new entry for tracker log file
-    new_entry = copy.deepcopy( APP['tracker'])
+    new_entry = copy.deepcopy(APP['tracker'])
     new_entry["time_stamp"] = datetime.datetime.now().strftime("%H:%M:%S")
     new_entry["pygame_tick"] = pygame.time.get_ticks()
     data["track_data"].append(new_entry)
     # Write the updated data back to the file
     with open(APP["current_log_file"], 'w') as file:
         json.dump(data, file, indent=4)
-    
+        
+# Load the statistics tracker from file
+# Returns a list of dicts
+def load_log_tracker(filename: str) -> list:
+    path = "sim_statistics_data"
+    with open(f'{path}/{filename}', 'r') as json_file:
+        data = json.load(json_file)
+        
+    return data['track_data']
+
 # OLD FUNCTION. Now replaced by "random_with_bias"
 # Calculate a new parameter for a new organism based on previous min and max params of previous organism
 def calc_new_paramater(min: float, max: float) -> float:
