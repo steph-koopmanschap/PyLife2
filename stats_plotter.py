@@ -25,6 +25,7 @@ def load_data(filename = None):
 
 # Options: "real" or "ticks"
 def plot(time_format = "real"):
+    print("Plotting...")
     data = load_data()
     time_data = []
     total_organisms = []
@@ -45,23 +46,22 @@ def plot(time_format = "real"):
         total_current_energy.append(entry["total_current_energy"]) 
         average_current_energy.append(entry["average_current_energy"]) 
         for label, value in entry.items():
-            if label in species_labels:
+            if label in species_labels: # and label != "total_plankton"
                 if label not in species_counts_dict:
                     species_counts_dict[label] = []
                 species_counts_dict[label].append(value)
     for label, values in species_counts_dict.items():
         species_counts_list.append(values)
 
+    # print("time_data ", time_data)
+    # print("species", species_labels)
+    # print("species_counts_list", species_counts_list)
+    # print("total_organisms ", total_organisms)
+    # print("total_current_energy ", total_current_energy)
+    # print("average_current_energy ", average_current_energy)
 
-    print("time_data ", time_data)
-    print("species", species_labels)
-    print("species_counts_list", species_counts_list)
-    print("total_organisms ", total_organisms)
-    print("total_current_energy ", total_current_energy)
-    print("average_current_energy ", average_current_energy)
-
-    xlabel = 'Time stamp' if time_data == "real" else 'Sim ticks'
     
+    xlabel = 'Time stamp' if time_data == "real" else 'Sim ticks'
     # Plotting total_organisms vs time_stamp
     plt.figure(figsize=(10, 5))
     plt.plot(time_data, total_organisms, marker='o')
@@ -99,13 +99,15 @@ def plot(time_format = "real"):
     plt.figure(figsize=(10, 5))
     for i in range(len(species_counts_list)):
         plt.plot(time_data, species_counts_list[i], marker='o')
-    plt.legend(species_labels)
+    plt.legend(species_labels) #species_labels[1:]
     plt.title('Species counts over Time')
     plt.xlabel(xlabel)
     plt.ylabel('Species counts')
     plt.xticks(rotation=45)
     plt.tight_layout()
     plt.savefig(f'plot_results/species_counts_{time_format}.png')
+    
+    print("Plotting done.")
     
 plot('real')
 plot('ticks')
