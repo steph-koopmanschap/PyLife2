@@ -23,8 +23,8 @@ class Organism(pygame.sprite.Sprite):
         # These are internal variables that can potentially change over time.
         # Note: We probably can only use floats and integers here
         self.current_state = {
-            "width": random_with_bias(params["min_width"], params["max_width"]),
-            "height": random_with_bias(params["min_height"], params["max_height"]),
+            "width": int(random_with_bias(params["min_width"], params["max_width"])),
+            "height": int(random_with_bias(params["min_height"], params["max_height"])),
             "current_vision_range": random_with_bias(params["min_vision_range"], params["max_vision_range"]),
             "current_speed": 0.0,
             "current_energy": params["max_energy"] * 0.5,
@@ -37,26 +37,35 @@ class Organism(pygame.sprite.Sprite):
             "last_reproduction_time": pygame.time.get_ticks(),
             "closest_predator_distance": -1.0, 
             "closest_prey_distance": -1.0,
-            "closest_same_species_distance": -1.0
+            "closest_same_species_distance": -1.0,
+            "current_offspring_produced": random_with_bias(params["min_offspring_produced"], params["max_offspring_produced"])
         }
         # References to the class instances of the closest organisms
         self.closest_predator = None
         self.closest_prey = None
         self.closest_same_species = None
+        # Other things
         self.reproduction_pentalty = 0.5
+        # The available methods are all the methods of this class.
+        self.available_methods = [method for method in dir(self) if "__" not in method]
         # PyGame Specific
         super().__init__()
         self.image = pygame.Surface((self.current_state["width"], self.current_state["height"]))
         self.image.fill(self.params["color"])
         self.rect = self.image.get_rect()
-        self.rect.x = position[0] #random.randrange(WINDOW_WIDTH - width)
-        self.rect.y = position[1] #random.randrange(WINDOW_HEIGHT - height)
+        self.rect.x = position[0]
+        self.rect.y = position[1]
         # Tracking
         APP['tracker'][f"total_{self.params['species']}"] += 1
         # OUTDATED ?
         self.move_direction = random.uniform(0, 2 * math.pi)
         self.move_timer = pygame.time.get_ticks() + random.randint(1000, 3000)
         
+    def is_behavior_allowed(self): 
+        if self.available_methods in self.params['behaviors']:
+            return True
+        return False
+    
     # Update itself
     def update(self):
         self.screen_wrap()
@@ -64,6 +73,8 @@ class Organism(pygame.sprite.Sprite):
         self.hunger()
         # See around itself to detect other organisms
         self.vision()
+        # Check if organism should reproduce
+        self.reproduce()
         # Check if organism should die
         self.die()
         
@@ -97,19 +108,20 @@ class Organism(pygame.sprite.Sprite):
             
     # The organism "sees" around itself to detect other organisms
     def vision(self):
-        nearby_organisms = self.find_nearby_organisms()
-        organisms_distances = self.get_organisms_distances(nearby_organisms)
-        # Extract the closest predator, prey, and same species data
-        closest_predators = next(([org, dist] for org, dist in organisms_distances if org.params["species"] in self.params["predators"]), None)
-        closest_preys = next(([org, dist] for org, dist in organisms_distances if org.params["species"] in self.params["prey"]), None)
-        closest_same_speciess = next(([org, dist] for org, dist in organisms_distances if org.params["species"] == self.params["species"]), None)
-        # Update state
-        self.current_state["closest_predator_distance"] = closest_predators[1] if closest_predators else -1.0
-        self.current_state["closest_prey_distance"] = closest_preys[1] if closest_preys else -1.0
-        self.current_state["closest_same_species_distance"] = closest_same_speciess[1] if closest_same_speciess else -1.0
-        self.closest_predator = closest_predators[0] if closest_predators else None
-        self.closest_prey = closest_preys[0] if closest_preys else None
-        self.closest_same_species = closest_same_speciess[0] if closest_same_speciess else None
+        if self.is_behavior_allowed():
+            nearby_organisms = self.find_nearby_organisms()
+            organisms_distances = self.get_organisms_distances(nearby_organisms)
+            # Extract the closest predator, prey, and same species data
+            closest_predators = next(([org, dist] for org, dist in organisms_distances if org.params["species"] in self.params["predators"]), None)
+            closest_preys = next(([org, dist] for org, dist in organisms_distances if org.params["species"] in self.params["prey"]), None)
+            closest_same_speciess = next(([org, dist] for org, dist in organisms_distances if org.params["species"] == self.params["species"]), None)
+            # Update state
+            self.current_state["closest_predator_distance"] = closest_predators[1] if closest_predators else -1.0
+            self.current_state["closest_prey_distance"] = closest_preys[1] if closest_preys else -1.0
+            self.current_state["closest_same_species_distance"] = closest_same_speciess[1] if closest_same_speciess else -1.0
+            self.closest_predator = closest_predators[0] if closest_predators else None
+            self.closest_prey = closest_preys[0] if closest_preys else None
+            self.closest_same_species = closest_same_speciess[0] if closest_same_speciess else None
     
     # This is work in progress function not yet implemented
     # This function allows the organism to communicate with organisms of the same species
@@ -119,10 +131,11 @@ class Organism(pygame.sprite.Sprite):
     # Move in a given direction
     # Direction is in an angle from 0 to 2 * math.pi
     def move(self, direction_angle):
-        dx = math.cos(direction_angle) * self.current_state["current_speed"]
-        dy = math.sin(direction_angle) * self.current_state["current_speed"]
-        self.rect.x += dx
-        self.rect.y += dy
+        if self.is_behavior_allowed():
+            dx = math.cos(direction_angle) * self.current_state["current_speed"]
+            dy = math.sin(direction_angle) * self.current_state["current_speed"]
+            self.rect.x += dx
+            self.rect.y += dy
             
     # Checks if the target is within the vision range
     def is_within_vision(self, target_sprite) -> bool:
@@ -174,28 +187,52 @@ class Organism(pygame.sprite.Sprite):
             prey.kill()
     
     def reproduce(self):
-        current_time = pygame.time.get_ticks()
-        if self.current_state["current_energy"] >= self.params["max_energy"] and current_time - self.last_reproduction_time > self.current_state["reproduction_rate"]:        
-            # Reproduction penalty reduces energy of current organism by a certein percentage
-            self.current_state["current_energy"] *= self.reproduction_pentalty
-            offset = 50 # Position offset of where the new organism should be.
-            new_position = [self.rect.centerx + random.randint(-(offset + self.current_state["width"]), offset + self.current_state["width"]),
-                            self.rect.centery + random.randint(-(offset + self.current_state["height"]), offset + self.current_state["height"])]
-            new_organism = Organism(self.params, new_position) 
-            all_sprites.add(new_organism)
-            self.last_reproduction_time = current_time
+        # if offspring produced is 0 the organism is infertile
+        if self.current_state['current_offspring_produced'] != 0.0:
+            # Reproduction happens if there is enough energy and if enough time has passed
+            current_time = pygame.time.get_ticks()
+            energy_condition = self.current_state["current_energy"] >= self.params["max_energy"]
+            time_condition = current_time - self.current_state["last_reproduction_time"] > self.current_state["current_reproduction_rate"]
+            reproduce = False
+            if "reproduce_plant" in self.params["behaviors"]:
+                if time_condition:
+                    reproduce = True        
+            else:
+                if energy_condition and time_condition:        
+                    reproduce = True
+            if reproduce == True:
+                # Reproduction penalty reduces energy of current organism by a certein percentage
+                self.current_state["current_energy"] *= self.reproduction_pentalty
+                offset = 50 # Position offset of where the new organism should be.
+                # The offspring_produced decides how many offspring are created based on a normal distribution
+                for i in range(int(self.current_state['current_offspring_produced'])):
+                    new_position = [self.rect.centerx + random.randint(-(offset + self.current_state["width"]), offset + self.current_state["width"]),
+                                    self.rect.centery + random.randint(-(offset + self.current_state["height"]), offset + self.current_state["height"])]
+                    new_organism = Organism(self.params, new_position)  #copy.deepcopy.self.params Should we deep copy the params?
+                    all_sprites.add(new_organism)
+                # Recalculate the offspring produced for next time
+                self.current_state["current_offspring_produced"]: random_with_bias(self.params["min_offspring_produced"], self.params["max_offspring_produced"])
+                self.current_state["last_reproduction_time"] = current_time
             
     # Reduce the energy level of the organism from hunger
     def hunger(self):
-        current_time = pygame.time.get_ticks()
-        if current_time - self.current_state["last_energy_update_time"] > self.current_state["current_energy_loss_rate"]:
-            # Energy loss is also based the current moving speed of the organism
-            self.current_state["current_energy"] -= 1 + (self.current_state["current_speed"] * 0.8)
-            self.current_state["last_energy_update_time"] = current_time
+        if self.is_behavior_allowed():
+            current_time = pygame.time.get_ticks()
+            if current_time - self.current_state["last_energy_update_time"] > self.current_state["current_energy_loss_rate"]:
+                # Energy loss is also based the current moving speed of the organism
+                self.current_state["current_energy"] -= 1 + (self.current_state["current_speed"] * 0.8)
+                self.current_state["last_energy_update_time"] = current_time
 
     # When and what happens on death
     def die(self):
         # Death happens if energy level < 0 (starvation) or the organism reached its lifespan
-        if self.current_state["current_energy"] <= 0 or pygame.time.get_ticks() - self.current_state["creation_time"] > self.current_state["lifespan"]:
-            APP['tracker'][f"total_{self.params['species']}"] -= 1
-            self.kill()
+        lifespan_condition = pygame.time.get_ticks() - self.current_state["creation_time"] > self.current_state["lifespan"]
+        if "die_plant" in self.params["behaviors"]:
+            if lifespan_condition:
+                APP['tracker'][f"total_{self.params['species']}"] -= 1
+                self.kill()
+        else:
+            energy_condition = self.current_state["current_energy"] <= 0
+            if energy_condition or lifespan_condition:
+                APP['tracker'][f"total_{self.params['species']}"] -= 1
+                self.kill()

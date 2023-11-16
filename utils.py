@@ -12,6 +12,9 @@ def random_with_bias(min: float, max: float, bias_factor=1.0) -> float:
     # Exit early if min and max are 0
     if min == 0.0 and max == 0.0:
         return 0.0
+    # Exit early if min and max are equal
+    if min == max:
+        return max
     midpoint = (min + max) * 0.5
     spread = 3.0
     # Calculate standard deviation based on the distance from the midpoint

@@ -1,7 +1,7 @@
 import random
 import json
 import numpy as np
-from organisms import Organisms
+import inspect
 
 def calc_new_paramater(min: float, max: float) -> float:
     midpoint = (min + max) * 0.5
@@ -73,4 +73,81 @@ def save_organism_definitions(organisms: dict):
         json.dump(organisms, json_file, indent=4)
     print("File saved.")
 
-save_organism_definitions(Organisms)
+#save_organism_definitions(Organisms)
+
+def getClassMethods():
+    methods = [method for method in dir(Animal) if callable(getattr(Animal, method)) and not method.startswith("__")]
+
+def functionOne(function):
+    return function.__name__
+    
+    
+class MyClass:
+    def functionTwo(self):
+        print(functionOne(self.functionTwo))
+        
+myclass = MyClass()
+myclass.functionTwo()
+
+# def checkBehaviorAllowed(func):
+#     def wrapper(*args, **kwargs):
+#         if func
+#         print(f"Hello from {func.__name__}")
+#         #return func(*args, **kwargs)
+#     return wrapper
+
+
+
+class Animal:
+    def __init__(self, params):
+        self.params = params
+        self.available_methods = [method for method in dir(self) if "__" not in method]
+        print("available_methods", self.available_methods)
+        
+    def is_behavior_allowed(self): #function_name
+        if self.available_methods in self.params['behaviors']:
+            return True
+        return False
+    
+    def decide():
+        pass
+
+    def make_sound(self):
+        print(f"{self.params['name']}: {self.params['sound']}")
+
+    def fly(self):
+        #if self.is_behavior_allowed(inspect.currentframe().f_code.co_name):
+        if self.is_behavior_allowed():
+            print(f"{self.params['name']}: I am flying")
+
+    def walk(self):
+        if self.is_behavior_allowed():
+            print(f"{self.params['name']}: I am walking")
+
+bird = {
+    "name": 'bird', 
+    "sound": "chirp",
+    "behaviors": ["fly"]
+}
+
+dog = {
+    "name": 'dog', 
+    "sound": "woof",
+    "behaviors": ["walk"]
+}
+
+cat = {
+    "name": 'cat', 
+    "sound": "meow",
+    "behaviors": ["fly"]
+}
+
+Cat = Animal(cat)
+Dog = Animal(dog)
+
+Cat.make_sound()
+Dog.make_sound()
+Cat.fly()
+Cat.walk()
+Dog.fly()
+Dog.walk()

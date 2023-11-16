@@ -1,6 +1,8 @@
 {
     "Plankton": {
         "species": "plankton",
+        "has_brain": false,
+        "behaviors": ["reproduce_plant", "die_plant"],
         "min_width": 2.0,
         "max_width": 5.0,
         "min_height": 3.0,
@@ -17,15 +19,19 @@
         "prey": [],
         "predators": [],
         "max_energy": 10.0,
-        "min_energy_loss_rate": 9999999.0,
-        "max_energy_loss_rate": 9999999.0,
+        "min_energy_loss_rate": 0.0,
+        "max_energy_loss_rate": 0.0,
         "min_reproduction_rate": 10000.0,
         "max_reproduction_rate": 20000.0,
         "min_lifespan": 21000.0,
-        "max_lifespan": 25000.0
+        "max_lifespan": 25000.0,
+        "min_offspring_produced": 2.0,
+        "max_offspring_produced": 5.0
     },
     "Small_fish": {
         "species": "small_fish",
+        "has_brain": true,
+        "behaviors": ["vision", "move", "hunger"],
         "min_width": 10.0,
         "max_width": 20.0,
         "min_height": 5.0,
@@ -49,10 +55,14 @@
         "min_reproduction_rate": 30000.0,
         "max_reproduction_rate": 60000.0,
         "min_lifespan": 60000.0,
-        "max_lifespan": 120000.0
+        "max_lifespan": 120000.0,
+        "min_offspring_produced": 1.0,
+        "max_offspring_produced": 3.0
     },
     "Big_fish": {
         "species": "big_fish",
+        "has_brain": true,
+        "behaviors": ["vision", "move", "hunger"],
         "min_width": 10.0,
         "max_width": 15.0,
         "min_height": 20.0,
@@ -76,10 +86,14 @@
         "min_reproduction_rate": 45000.0,
         "max_reproduction_rate": 90000.0,
         "min_lifespan": 90000.0,
-        "max_lifespan": 180000.0
+        "max_lifespan": 180000.0,
+        "min_offspring_produced": 1.0,
+        "max_offspring_produced": 1.0
     },
     "Shark": {
         "species": "shark",
+        "behaviors": ["vision", "move", "hunger"],
+        "has_brain": true,
         "min_width": 20.0,
         "max_width": 50.0,
         "min_height": 30.0,
@@ -103,10 +117,14 @@
         "min_reproduction_rate": 180000.0,
         "max_reproduction_rate": 240000.0,
         "min_lifespan": 300000.0,
-        "max_lifespan": 480000.0
+        "max_lifespan": 480000.0,
+        "min_offspring_produced": 1.0,
+        "max_offspring_produced": 1.0
     },
     "Orca": {
         "species": "orca",
+        "behaviors": ["vision", "move", "hunger"],
+        "has_brain": true,
         "min_width": 20.0,
         "max_width": 50.0,
         "min_height": 30.0,
@@ -130,10 +148,14 @@
         "min_reproduction_rate": 180000.0,
         "max_reproduction_rate": 240000.0,
         "min_lifespan": 300000.0,
-        "max_lifespan": 480000.0
+        "max_lifespan": 480000.0,
+        "min_offspring_produced": 1.0,
+        "max_offspring_produced": 1.0
     },
     "Whale": {
         "species": "whale",
+        "behaviors": ["vision", "move", "hunger"],
+        "has_brain": true,
         "min_width": 75.0,
         "max_width": 150.0,
         "min_height": 30.0,
@@ -157,6 +179,8 @@
         "min_reproduction_rate": 240000.0,
         "max_reproduction_rate": 300000.0,
         "min_lifespan": 480000.0,
-        "max_lifespan": 600000.0
+        "max_lifespan": 600000.0,
+        "min_offspring_produced": 1.0,
+        "max_offspring_produced": 1.0
     }
 }

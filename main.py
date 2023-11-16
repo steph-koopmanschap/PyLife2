@@ -55,7 +55,6 @@ def main_loop():
             # Update the time_since_last_logging for the next interval
             time_since_last_logging = pygame.time.get_ticks()
 
-
 # Start the simulation
 def start():
     generate_world()
