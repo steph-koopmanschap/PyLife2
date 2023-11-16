@@ -21,6 +21,18 @@ def clear_screen():
     #window.fill((4, 217, 255)) # Light blue
     #window.fill((255, 255, 255)) # White
 
+def handle_input(event):
+    if event.type == pygame.QUIT:
+        pygame.quit()
+        sys.exit()
+        
+    if event.type == pygame.KEYDOWN:
+        # Check if the key pressed is 'L'
+        if event.key == pygame.K_l:
+            # Force logging
+            update_tracker(species, all_sprites)
+            log_tracker()
+
 # Update simulation logic here
 def update():
     all_sprites.update()
@@ -35,9 +47,7 @@ def main_loop():
     time_since_last_logging = pygame.time.get_ticks()
     while True:
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
+            handle_input(event)
 
         update()
         clear_screen()
@@ -57,6 +67,8 @@ def main_loop():
 
 # Start the simulation
 def start():
+    print("Welcome to PyLife2")
+    print("Press 'L' to force write statistics data to the log")
     generate_world()
     update_tracker(species, all_sprites)
     # Create the tracker file
