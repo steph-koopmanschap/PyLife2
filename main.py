@@ -1,6 +1,6 @@
 import sys
 import json
-import time
+import random
 import pygame
 #from pygame.math import Vector2
 from constants import COLORS, FPS, WINDOW_WIDTH, WINDOW_HEIGHT
@@ -44,6 +44,15 @@ def draw():
 # Main program loop
 def main_loop():
     clock = pygame.time.Clock()
+    # To which point the framerate need to drop below, to purge organisms from the game for maintaining smooth framerate
+    framerate_purge_level = 10.0
+    # Purge every x seconds if framerate below framerate_purge_level
+    purge_rate = 3500 
+    # How much percentage of the species to purge
+    purge_percentage = 0.7
+    # time_since_last_purge is used to track when was the last time the framerate droppepd below
+    # the frame_rate purge level.
+    time_since_last_purge = pygame.time.get_ticks()
     time_since_last_logging = pygame.time.get_ticks()
     while True:
         for event in pygame.event.get():
@@ -56,7 +65,28 @@ def main_loop():
         # Update the display
         pygame.display.update()
         clock.tick(FPS)
-        
+        # Get the current frame rate
+        current_fps = clock.get_fps()
+        # If the frame rate drops we will kill off purge_percentage of the most abudant species
+        if current_fps < framerate_purge_level and pygame.time.get_ticks() - time_since_last_purge > purge_rate:
+            print(f"Framerate dropping... Current FPS: {current_fps} ... Deleting {purge_percentage*100}% of the most abundant species.")
+            organism_counts = {}
+            for specie in species:
+                organism_counts[specie] = (APP['tracker'][f"total_{specie}"]) #specie.replace("total_", "")
+            most_abudant_species = max(organism_counts, key=organism_counts.get)
+            print(f"Most abundant species: {most_abudant_species} count: {organism_counts[most_abudant_species]}")
+            all_organisms_most_abundant = []
+            for organism in all_sprites:
+                if organism.params["species"] == most_abudant_species:
+                    all_organisms_most_abundant.append(organism)
+            number_of_organisms_to_delete = int(len(all_organisms_most_abundant) * purge_percentage)
+            for _ in range(number_of_organisms_to_delete):
+                organism_to_delete = random.choice(all_organisms_most_abundant)
+                organism_to_delete.destroy()
+                organism_to_delete.kill()
+            time_since_last_purge = pygame.time.get_ticks()
+            print(f"Done deleting {number_of_organisms_to_delete} ({purge_percentage*100}%) of {most_abudant_species}")
+                
         # Log statistics to file every 5 seconds
         elapsed_time = pygame.time.get_ticks() - time_since_last_logging
         if elapsed_time >= APP['logging_rate']:
@@ -69,6 +99,7 @@ def main_loop():
 def start():
     print("Welcome to PyLife2")
     print("Press 'L' to force write statistics data to the log")
+    print("Loaded species: ", species)
     generate_world()
     update_tracker(species, all_sprites)
     # Create the tracker file
@@ -87,4 +118,5 @@ def start():
     # Start the main loop
     main_loop()
 
-start()
+if __name__ == "__main__":
+    start()
