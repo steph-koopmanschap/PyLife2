@@ -32,6 +32,7 @@ def handle_input(event):
             # Force logging
             update_tracker(species, all_sprites)
             log_tracker()
+            print("Force logged to file.")
 
 # Update simulation logic here
 def update():
@@ -45,7 +46,7 @@ def draw():
 def main_loop():
     clock = pygame.time.Clock()
     # To which point the framerate need to drop below, to purge organisms from the game for maintaining smooth framerate
-    framerate_purge_level = 10.0
+    framerate_purge_level = 5.0
     # Purge every x seconds if framerate below framerate_purge_level
     purge_rate = 3500 
     # How much percentage of the species to purge

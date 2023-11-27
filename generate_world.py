@@ -35,7 +35,7 @@ def generate_world():
         all_sprites.add(plankton)
         
     # Add small fishes
-    for i in range(math.ceil(BASE_PLANKTON * 0.04)):
+    for i in range(math.ceil(BASE_PLANKTON * 0.06)):
         random_position = [random.randrange(WINDOW_WIDTH - Organisms["Small_fish"]["max_width"]), random.randrange(WINDOW_HEIGHT - Organisms["Small_fish"]["max_height"])]
         small_fish = Organism(Organisms["Small_fish"], random_position)
         all_sprites.add(small_fish)
@@ -59,7 +59,7 @@ def generate_world():
         all_sprites.add(orca)
 
     # Add whales
-    for i in range(math.ceil(BASE_PLANKTON * 0.0004)):
+    for i in range(math.ceil(BASE_PLANKTON * 0.0020)):
         random_position = [random.randrange(WINDOW_WIDTH - Organisms["Whale"]["max_width"]), random.randrange(WINDOW_HEIGHT - Organisms["Whale"]["max_height"])]
         whale = Organism(Organisms["Whale"], random_position)
         all_sprites.add(whale)

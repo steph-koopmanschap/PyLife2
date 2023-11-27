@@ -30,6 +30,8 @@ class Organism(pygame.sprite.Sprite):
             "current_vision_range": random_with_bias(params["min_vision_range"], params["max_vision_range"]),
             # How fast the organism is moving. The current_energy of the organism goes down faster the faster it moves.
             "current_speed": 0.0,
+            # The current direction the organism is facing
+            "current_direction": 0.0,
             # How much energy reserves the organism has.
             # When current energy =< 0 the organism dies. When current_energy => max_energy the organism can reproduce
             "current_energy": params["max_energy"] * 0.5,
@@ -57,7 +59,7 @@ class Organism(pygame.sprite.Sprite):
             "closest_same_species_distance": -1.0,
             # How many offspring are produced at the time of next reproduction
             "current_offspring_produced": random_with_bias(params["min_offspring_produced"], params["max_offspring_produced"])
-        }        
+        }    
         # References to the class instances of the closest organisms
         self.closest_predator = None
         self.closest_prey = None
@@ -79,6 +81,18 @@ class Organism(pygame.sprite.Sprite):
         # OUTDATED ?
         self.move_direction = random.uniform(0, 2 * math.pi)
         self.move_timer = pygame.time.get_ticks() + random.randint(1000, 3000)
+        # AI using PPO algorithm
+        if self.params["has_brain"]:
+            # The possible actions/behaviors the organism can take    
+            self.action_space = [
+                "change_speed",
+                "change_direction",
+                "rest",
+                "reproduce"
+                "flee_from_predator",
+                "chase_prey",
+            ]
+            self.time_since_last_action = pygame.time.get_ticks()
         
     def is_behavior_allowed(self, behavior): 
         return behavior in self.params['behaviors'] # self.available_methods[self.available_methods.index(behavior)]
@@ -94,6 +108,10 @@ class Organism(pygame.sprite.Sprite):
         self.vision()
         # Check if colliding with other organisms
         self.check_collision()
+        # Decide on an action to do
+        self.decide()
+        # Move the organism
+        self.move(radians=False)
         # Check if organism should reproduce
         self.reproduce()
         # Update age
@@ -103,20 +121,32 @@ class Organism(pygame.sprite.Sprite):
         
     # Decide and choose on a behavior or action to perform based on its current state.
     def decide(self):
-        # Possible behaviors:
-            # Find and chase a prey
-            # Move away from a predator if its close
-            # Move in a random direction until a prey or predator is found
-            # Reproduce if possible, but there is a penalty of 50% loss of energy upon reproduction
-            # Idle (Do not move to conserve energy, because moving decreases the current energy the organism has)
-        
         # The organism has 2 goals:
-            # Remain alive for as long as possible
-                # (current energy is slowly depleted unless the organism eats food)
-                # There is a constant threat of being eaten by predators
-            # Reproduce as much as possible.
-        pass
-        
+        # Remain alive for as long as possible
+            # (current energy is slowly depleted unless the organism eats food)
+            # There is a constant threat of being eaten by predators
+        # Reproduce as much as possible.
+        if self.params["has_brain"]:
+            #pass
+            # Choose an action from the action space
+            new_action = random.choice(self.action_space)
+            if pygame.time.get_ticks() - self.time_since_last_action > random.randint(200, 5000):
+                if new_action == "change_speed":
+                    self.change_speed(round(random.uniform(self.params['min_speed'], self.params['max_speed']), 2))
+                elif new_action == "change_direction":
+                    self.change_direction(round(random.uniform(0.0, 360.0), 2)) 
+                elif new_action == "rest":
+                    self.rest()
+                elif new_action == "flee_from_predator":
+                    self.flee_from_predator()
+                elif new_action == "chase_prey":
+                    self.chase_prey()
+                elif new_action == "reproduce":
+                    self.reproduce()
+                #elif new_action == "random_movement":
+            
+                self.time_since_last_action = pygame.time.get_ticks()
+    
     def screen_wrap(self):
         # Only screen wrap on x-axis
         if self.rect.left > WINDOW_WIDTH:
@@ -149,17 +179,43 @@ class Organism(pygame.sprite.Sprite):
     
     # This is work in progress function not yet implemented
     # This function allows the organism to communicate with organisms of the same species
-    def communicate():
+    def communicate(self):
         pass
-            
+    
+    def change_direction(self, new_direction: float):
+        self.current_state["current_direction"] = new_direction
+    
+    def change_speed(self, new_speed: float):
+        if new_speed > self.params['max_speed']:
+            self.current_state["current_speed"] = self.params['max_speed']
+        else:
+            self.current_state["current_speed"] = new_speed
+    
+    # time_to_rest is not used (yet)
+    def rest(self, time_to_rest=0.0):
+        self.change_speed(0.0)
+        
     # Move in a given direction
-    # Direction is in an angle from 0 to 2 * math.pi
-    def move(self, direction_angle):
+    # Direction is in an angle. if radians=True then direction_angle is given in radians
+    # if radians=False then direction_angle is given in degrees from 0 to 360
+    def move(self, radians=True):
         if self.is_behavior_allowed("move"):
-            dx = math.cos(direction_angle) * self.current_state["current_speed"]
-            dy = math.sin(direction_angle) * self.current_state["current_speed"]
-            self.rect.x += dx
-            self.rect.y += dy
+            # We only need to 'move' if speed != 0
+            if self.current_state["current_speed"] != 0.0:
+                direction_angle = self.current_state["current_direction"]
+                if radians == False:
+                    direction_angle = math.radians(direction_angle)
+                if self.is_behavior_allowed("move"):
+                    dx = math.cos(direction_angle) * self.current_state["current_speed"]
+                    dy = math.sin(direction_angle) * self.current_state["current_speed"]
+                    self.rect.x += dx
+                    self.rect.y += dy
+                
+    def flee_from_predator(self):
+        self.change_speed(self.params['max_speed'])
+        
+    def chase_prey(self):
+        self.change_speed(self.params['max_speed'])
             
     # Checks if the target is within the vision range
     def is_within_vision(self, target_sprite) -> bool:
@@ -223,6 +279,11 @@ class Organism(pygame.sprite.Sprite):
                 if self.is_prey_or_predator(collided_organism) == "prey":
                     self.eat_prey(collided_organism)
     
+    # Specific reproduction for plants        
+    def reproduce_plant(self):
+        pass
+    
+    # Specific reproduction for non-plants
     def reproduce(self):
         # If offspring produced is 0 the organism is infertile
         if self.current_state['current_offspring_produced'] != 0.0:
