@@ -63,7 +63,7 @@ def plot(time_format = "real"):
     xlabel = 'Time stamp' if time_data == "real" else 'Sim ticks'
     # Plotting total_organisms vs time_stamp
         # plt.figure(figsize=(10, 5))
-        # plt.plot(time_data, total_organisms, marker='o')
+        # plt.plot(time_data, total_organisms, )
         # plt.title('Total Organisms over Time')
         # plt.xlabel(xlabel)
         # plt.ylabel('Total Organisms')
@@ -75,8 +75,8 @@ def plot(time_format = "real"):
 
     # Plotting total_current_energy and total_organisms vs time_stamp
     plt.figure(figsize=(10, 5))
-    plt.plot(time_data, total_current_energy, marker='o', color='orange')
-    plt.plot(time_data, total_organisms, marker='x', color = 'green')
+    plt.plot(time_data, total_current_energy, color='orange')
+    plt.plot(time_data, total_organisms, color = 'green')
     plt.legend(["Total energy", "Total organisms"])
     plt.title('Total Energy and Total Organisms over Time')
     plt.xlabel(xlabel)
@@ -89,7 +89,7 @@ def plot(time_format = "real"):
 
     # Plotting average_current_energy vs time_stamp
     plt.figure(figsize=(10, 5))
-    plt.plot(time_data, average_current_energy, marker='o', color='green')
+    plt.plot(time_data, average_current_energy, color='green')
     plt.title('Average Current Energy over Time')
     plt.xlabel(xlabel)
     plt.ylabel('Average Current Energy')
@@ -101,7 +101,7 @@ def plot(time_format = "real"):
     # Plotting organisms counts vs time_stamp
     plt.figure(figsize=(10, 5))
     for i in range(len(species_counts_list)):
-        plt.plot(time_data, species_counts_list[i], marker='o')
+        plt.plot(time_data, species_counts_list[i])
     plt.legend(species_labels) #species_labels[1:]
     plt.title('Species counts over Time')
     plt.xlabel(xlabel)
