@@ -1,10 +1,13 @@
 import math
 import random
 import uuid
+import numpy as np
+import torch as T
 import pygame
 from globals import APP
 from constants import WINDOW_WIDTH, WINDOW_HEIGHT
-from utils import load_organism_definitions, random_with_bias, calc_distance
+from utils import load_organism_definitions, random_with_bias, calc_distance, opposite_angle
+from AI import AgentMemory, ActorNeuralNetwork, CriticNeuralNetwork, squeeze_vars
 
 # Sprite groups
 all_sprites = pygame.sprite.Group()
@@ -88,12 +91,51 @@ class Organism(pygame.sprite.Sprite):
                 "change_speed",
                 "change_direction",
                 "rest",
-                "reproduce"
                 "flee_from_predator",
-                "chase_prey",
+                "chase_prey"
+                #"reproduce",
             ]
+            state_to_parse = self.prepare_state_for_AI()
             self.time_since_last_action = pygame.time.get_ticks()
-        
+            # HYPER PARAMATERS of the AI
+            learning_rate = 0.0003
+            self.gamma = 0.99
+            self.gae_lambda = 0.95
+            self.epsilon = 0.2
+            self.policy_clip_range = [1 - self.epsilon, 1 + self.epsilon]
+            neural_network_deepness = 256
+            batch_size = 5
+            self.n_epochs = 4 # How many epochs/updates to perform in a learning cycle
+            # How many actions have to be performed for the AI to learn
+            self.n_actions_trigger_learning = 20
+            # How many actions have been performed. (resets every learning cycle)
+            self.action_counter = 0
+            self.current_action = ""
+            self.memory = AgentMemory(batch_size)
+            self.actorNN = ActorNeuralNetwork(len(self.action_space), len(state_to_parse), learning_rate, neural_network_deepness, neural_network_deepness)
+            self.criticNN = CriticNeuralNetwork( len(state_to_parse), learning_rate, neural_network_deepness, neural_network_deepness)
+            
+    # Transforms the state of the organism into a format the AI can understand
+    def prepare_state_for_AI(self):
+        return [
+            self.current_state['current_vision_range'],
+            self.current_state['current_speed'],
+            self.current_state['current_direction'],
+            self.current_state['current_energy'],
+            self.current_state['current_energy_loss_rate'],
+            self.current_state['current_reproduction_rate'],
+            self.current_state['lifespan'],
+            self.current_state['current_age'],
+            self.current_state['predator_detected_time'],
+            self.current_state['creation_time'],
+            self.current_state['last_energy_update_time'],
+            self.current_state['last_reproduction_time'],
+            self.current_state['closest_predator_distance'],
+            self.current_state['closest_prey_distance'],
+            self.current_state['closest_same_species_distance'],
+            self.current_state['current_offspring_produced']
+        ]
+    
     def is_behavior_allowed(self, behavior): 
         return behavior in self.params['behaviors'] # self.available_methods[self.available_methods.index(behavior)]
             #return True
@@ -125,28 +167,115 @@ class Organism(pygame.sprite.Sprite):
         # Remain alive for as long as possible
             # (current energy is slowly depleted unless the organism eats food)
             # There is a constant threat of being eaten by predators
-        # Reproduce as much as possible.
+        # Reproduce as much as possible. Reproduction can happen if there is enough energy reserves
         if self.params["has_brain"]:
             #pass
-            # Choose an action from the action space
-            new_action = random.choice(self.action_space)
             if pygame.time.get_ticks() - self.time_since_last_action > random.randint(200, 5000):
-                if new_action == "change_speed":
-                    self.change_speed(round(random.uniform(self.params['min_speed'], self.params['max_speed']), 2))
-                elif new_action == "change_direction":
-                    self.change_direction(round(random.uniform(0.0, 360.0), 2)) 
-                elif new_action == "rest":
-                    self.rest()
-                elif new_action == "flee_from_predator":
-                    self.flee_from_predator()
-                elif new_action == "chase_prey":
-                    self.chase_prey()
-                elif new_action == "reproduce":
-                    self.reproduce()
-                #elif new_action == "random_movement":
+                state_to_parse = self.prepare_state_for_AI()
+                # Decide on which action to take from the action_space based on current_state
+                # Get the distribution from the actor (predict) based on current state
+                probability_distribution = self.actorNN(state_to_parse)
+                # Get the value of the current state
+                value = self.criticNN(state_to_parse)
+                action = probability_distribution.sample()
+                squeezed = squeeze_vars(probability_distribution, action, value)
+                probability = squeezed[0]
+                action = squeezed[1]
+                critic_value = squeezed[2]
+                # Choose an action from the action space
+                chosen_action = self.action_space[action]
+                self.action_counter += 1
+                #print(f"Chosen action: {chosen_action}, from {self.params['species']} ID: {self.instance_id}")
+                #chosen_action = random.choice(self.action_space)
+            #if pygame.time.get_ticks() - self.time_since_last_action > random.randint(200, 5000):
+
+                if chosen_action == "change_speed":
+                    reward = self.change_speed(round(random.uniform(self.params['min_speed'], self.params['max_speed']), 2))
+                elif chosen_action == "change_direction":
+                    reward = self.change_direction(round(random.uniform(0.0, 360.0), 2)) 
+                elif chosen_action == "rest":
+                    reward = self.rest()
+                elif chosen_action == "flee_from_predator":
+                    reward = self.flee_from_predator()
+                elif chosen_action == "chase_prey":
+                    reward = self.chase_prey()
+                #elif chosen_action == "reproduce":
+                #    reward = self.reproduce()
+                #elif chosen_action == "random_movement":
+                # Remember the state and outcome of the action just performed.
+                self.memory.store_memory(state_to_parse, action, critic_value, probability, reward, 0)
+                # Start learning every self.n_actions_trigger_learning
+                if (self.action_counter >= self.n_actions_trigger_learning):
+                    self.action_counter = 0 # Reset action acounter
+                    self.learn()
             
                 self.time_since_last_action = pygame.time.get_ticks()
     
+    # Make the AI learn (train the model)
+    def learn(self):
+        if self.params["has_brain"]:
+            # First put the models into training mode
+            self.actorNN.neuralNetwork.train()
+            self.criticNN.neuralNetwork.train()
+            for _ in range(self.n_epochs):
+                # Retrieve our momery which is the data used for training
+                mem = self.memory.generate_batches()
+                batches = mem[1]
+                print("memsize: ", len(mem))
+                print("batches: ", batches)
+                states = np.array(mem[0]['states'])
+                actions = np.array(mem[0]['actions'])
+                probabilities = np.array(mem[0]['probabilities'])
+                critic_outputs = np.array(mem[0]['critic_outputs'])
+                rewards = np.array(mem[0]['rewards'])
+                dones = np.array(mem[0]['dones'])
+                # Advantage is the 'goodness'/benefit of the state compared to the previous state
+                # The advantage needs to be calculated at each action
+                advantage = np.zeros(len(rewards), dtype=np.float32)
+                # For each action
+                for t in range(len(rewards - 1)):
+                    discount = 1 # Discount factor
+                    a_t = 0 # Advantage at each action
+                    for k in range(t, len(rewards)-1):
+                        a_t += discount * (rewards[k] + self.gamma * critic_outputs[k+1] * (1 - int(dones[k])) - critic_outputs[k])  
+                        discount *= self.gamma * self.gae_lambda
+                    advantage[t] = a_t
+                        
+                advantage = T.tensor(advantage).to(self.actorNN.device)
+                critic_outputs = T.tensor(critic_outputs).to(self.actorNN.device)
+                # Learning with mini batches
+                for batch in batches:
+                    states = T.tensor(states[batch], dtype=T.float).to(self.actorNN.device)
+                    old_probabilities = T.tensor(probabilities[batch]).to(self.actorNN.device)
+                    actions = T.tensor(actions[batch]).to(self.actorNN.device)
+                    
+                    #print("states", states)
+                    #print("states shape", states.shape)
+                    
+                    prob_distribution = self.actorNN(states)
+                    critic_value = self.criticNN(states)
+                    critic_value = T.squeeze(critic_value)
+                        
+                    new_probabilities = prob_distribution.log_prob(actions)
+                    prob_ratio = new_probabilities.exp() / old_probabilities.exp()
+                    weighted_probs = advantage[batch] * prob_ratio
+                    weighted_clipped_probs = T.clamp(prob_ratio, self.policy_clip_range[0], self.policy_clip_range[1]) * advantage[batch]
+                    actor_loss = -T.min(weighted_probs, weighted_clipped_probs).mean()
+                    # Return = advantage + critic_output_memory
+                    returns = advantage[batch] + critic_outputs[batch]
+                    # critic_loss = MSE(return - critic_output_network)
+                    critic_loss = (returns - critic_value)**2
+                    critic_loss = critic_loss.mean()
+                    total_loss = actor_loss + 0.5 * critic_loss
+                    self.actorNN.optimizer.zero_grad()
+                    self.criticNN.optimizer.zero_grad()
+                    total_loss.backward()
+                    self.actorNN.optimizer.step()
+                    self.criticNN.optimizer.step()
+            # Clear memory at end of learning.
+            # After this the memory is build up again from the next actions
+            self.memory.clear_memory()
+                
     def screen_wrap(self):
         # Only screen wrap on x-axis
         if self.rect.left > WINDOW_WIDTH:
@@ -184,16 +313,32 @@ class Organism(pygame.sprite.Sprite):
     
     def change_direction(self, new_direction: float):
         self.current_state["current_direction"] = new_direction
+        reward = 0.0
+        return reward
     
     def change_speed(self, new_speed: float):
         if new_speed > self.params['max_speed']:
             self.current_state["current_speed"] = self.params['max_speed']
         else:
             self.current_state["current_speed"] = new_speed
+        reward = 0.0
+        return reward
     
     # time_to_rest is not used (yet)
     def rest(self, time_to_rest=0.0):
         self.change_speed(0.0)
+        # Set reward for the AI
+        reward = 0
+        # Resting when low on energy is good
+        if self.current_state["current_energy"] < self.current_state["current_energy"] * 0.2:
+            reward += 10.0
+        # Resting if a prey/food is nearby is bad
+        if self.current_state["closest_prey_distance"] != -1.0:
+            reward -= 10.0
+        # Resting if a predator is nearby is bad
+        if self.current_state["closest_predator_distance"] != -1.0:
+            reward -= 10.0 
+        return reward
         
     # Move in a given direction
     # Direction is in an angle. if radians=True then direction_angle is given in radians
@@ -212,10 +357,22 @@ class Organism(pygame.sprite.Sprite):
                     self.rect.y += dy
                 
     def flee_from_predator(self):
-        self.change_speed(self.params['max_speed'])
-        
+        reward = 0.0
+        # If there is a predator we need to move in the opposite direction as the predator at max speed
+        if self.closest_predator != None:
+            self.change_direction(opposite_angle(self.closest_predator.current_state['current_direction']))
+            self.change_speed(self.params['max_speed'])
+            reward = 15.0
+        return reward
+    
     def chase_prey(self):
-        self.change_speed(self.params['max_speed'])
+        reward = 0.0
+        # If there is a prey we need to move in the same direction as the prey at max speed
+        if self.closest_prey != None:
+            self.change_direction(self.closest_prey.current_state['current_direction'])
+            self.change_speed(self.params['max_speed'])
+            reward = 15.0
+        return reward
             
     # Checks if the target is within the vision range
     def is_within_vision(self, target_sprite) -> bool:

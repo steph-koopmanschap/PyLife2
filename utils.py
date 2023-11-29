@@ -50,6 +50,13 @@ def generate_exponential_numbers(min_value, max_value, total_numbers, desired_ra
 
     return mapped_numbers.tolist()
 
+# Calculate opposite angle of a given angle
+# by adding 180 degrees to the angle.
+# Always returns a value between 0 and 360
+def opposite_angle(angle: float) -> float:
+    opposite = (angle + 180.0) % 360
+    return opposite
+
 # Retrieve instance variables as a dictionary
 def get_class_instance_vars(class_instance):
     instance_variables_dict = class_instance.__dict__

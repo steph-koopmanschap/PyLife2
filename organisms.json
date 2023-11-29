@@ -48,7 +48,9 @@
         "prey": [
             "plankton"
         ],
-        "predators": [],
+        "predators": [
+            "big_fish", "shark"
+        ],
         "max_energy": 10.0,
         "min_energy_loss_rate": 2000.0,
         "max_energy_loss_rate": 3000.0,
@@ -79,7 +81,9 @@
         "prey": [
             "small_fish"
         ],
-        "predators": [],
+        "predators": [
+            "shark"
+        ],
         "max_energy": 20.0,
         "min_energy_loss_rate": 2000.0,
         "max_energy_loss_rate": 3000.0,
@@ -110,7 +114,9 @@
         "prey": [
             "small_fish", "big_fish"
         ],
-        "predators": [],
+        "predators": [
+            "orca"
+        ],
         "max_energy": 25.0,
         "min_energy_loss_rate": 3000.0,
         "max_energy_loss_rate": 3500.0,
