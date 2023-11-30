@@ -1,6 +1,7 @@
 # App specific
 sim_statistics_data/*.json
 plot_results/*.png
+tmp.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
