@@ -1,4 +1,5 @@
 import sys
+import os
 import json
 import random
 import pygame
@@ -118,7 +119,7 @@ def start():
     file_timestamp = APP['sim_start_time'].strftime("%H:%M:%S %d-%m-%y")
     folder = "sim_statistics_data"
     filename = f'sim_tracker_{file_timestamp}.json'
-    path = f'{folder}/{filename}'
+    path = path = os.path.join(folder, filename)
     APP["current_log_file"] = path
     with open(path, 'w') as file:
         json.dump(tracker_file_dict, file, indent=4)

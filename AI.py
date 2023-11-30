@@ -1,3 +1,4 @@
+import os
 import random
 import numpy as np
 import torch as T
@@ -64,7 +65,7 @@ class AgentMemory():
 class ActorNeuralNetwork(nn.Module):
     def __init__(self, n_actions, state_dims, lr, fc1_dims=256, fc2_dims=256):
         super(ActorNeuralNetwork, self).__init__()
-        
+        self.checkpoint_folder = "ai_checkpoints"
         self.neuralNetwork = nn.Sequential(
             nn.Linear(state_dims, fc1_dims),
             nn.ReLU(),
@@ -85,10 +86,19 @@ class ActorNeuralNetwork(nn.Module):
         dist = self.neuralNetwork(state)
         dist = Categorical(dist) # Define categorical distribution
         return dist
+    
+    def save_checkpoint(self, checkpoint_file):
+        path = os.path.join(self.checkpoint_folder, checkpoint_file)
+        T.save(self.state_dict(), path)
+        
+    def load_checkpoint(self, checkpoint_file):
+        path = os.path.join(self.checkpoint_folder, checkpoint_file)
+        self.load_state_dict(T.load(path))
 
 class CriticNeuralNetwork(nn.Module):
     def __init__(self, state_dims, lr, fc1_dims=256, fc2_dims=256):
         super(CriticNeuralNetwork, self).__init__()
+        self.checkpoint_folder = "ai_checkpoints"
         self.neuralNetwork = nn.Sequential(
             nn.Linear(state_dims, fc1_dims),
             nn.ReLU(),
@@ -106,4 +116,12 @@ class CriticNeuralNetwork(nn.Module):
         state.to(self.device) # Send state to the GPU
         value = self.neuralNetwork(state)
         return value  
+    
+    def save_checkpoint(self, checkpoint_file):
+        path = os.path.join(self.checkpoint_folder, checkpoint_file)
+        T.save(self.state_dict(), path)
+        
+    def load_checkpoint(self, checkpoint_file):
+        path = os.path.join(self.checkpoint_folder, checkpoint_file)
+        self.load_state_dict(T.load(path))
 

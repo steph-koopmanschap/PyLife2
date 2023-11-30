@@ -2,6 +2,8 @@
 sim_statistics_data/*.json
 plot_results/*.png
 tmp.py
+ai_checkpoints/*
+!placeholder
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

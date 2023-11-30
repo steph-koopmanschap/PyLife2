@@ -1,3 +1,4 @@
+import os
 import random
 import json
 import datetime
@@ -115,7 +116,8 @@ def log_tracker():
 # Load the statistics tracker from file
 # Returns a list of dicts
 def load_log_tracker(filename: str) -> list:
-    path = "sim_statistics_data"
+    folder = "sim_statistics_data"
+    path = path = os.path.join(folder, filename)
     with open(f'{path}/{filename}', 'r') as json_file:
         data = json.load(json_file)
         

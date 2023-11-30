@@ -97,6 +97,9 @@ class Organism(pygame.sprite.Sprite):
             ]
             state_to_parse = self.prepare_state_for_AI()
             self.time_since_last_action = pygame.time.get_ticks()
+            # Checkpoint files are used for saving and loading a trained organism
+            self.checkpoint_file_actor = f"nnActor_{self.params['species']}_{self.instance_id}_{APP['simulation_id']}_{APP['sim_start_time_ticks']}"
+            self.checkpoint_file_actor = f"nnCritic_{self.params['species']}_{self.instance_id}_{APP['simulation_id']}_{APP['sim_start_time_ticks']}"
             # HYPER PARAMATERS of the AI
             learning_rate = 0.0003
             self.gamma = 0.99
