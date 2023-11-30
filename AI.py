@@ -81,8 +81,7 @@ class ActorNeuralNetwork(nn.Module):
     def forward(self, state):
         # Set model to evaluation mode to make predictions
         self.neuralNetwork.eval()
-        state = state_to_tensor(state)
-        state.to(self.device) # Send state to the GPU
+        state = state.to(self.device) # Send state to the GPU
         dist = self.neuralNetwork(state)
         dist = Categorical(dist) # Define categorical distribution
         return dist
@@ -112,8 +111,7 @@ class CriticNeuralNetwork(nn.Module):
         
     def forward(self, state):
         self.neuralNetwork.eval()
-        state = state_to_tensor(state)
-        state.to(self.device) # Send state to the GPU
+        state = state.to(self.device) # Send state to the GPU
         value = self.neuralNetwork(state)
         return value  
     

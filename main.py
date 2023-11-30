@@ -119,6 +119,7 @@ def start():
     file_timestamp = APP['sim_start_time'].strftime("%H:%M:%S %d-%m-%y")
     folder = "sim_statistics_data"
     filename = f'sim_tracker_{file_timestamp}.json'
+    filename = filename.replace(":", "-") # We need to remove ':' characters from the time to make Windows happy.
     path = path = os.path.join(folder, filename)
     APP["current_log_file"] = path
     with open(path, 'w') as file:

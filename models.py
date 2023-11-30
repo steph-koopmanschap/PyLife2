@@ -7,7 +7,7 @@ import pygame
 from globals import APP
 from constants import WINDOW_WIDTH, WINDOW_HEIGHT
 from utils import load_organism_definitions, random_with_bias, calc_distance, opposite_angle
-from AI import AgentMemory, ActorNeuralNetwork, CriticNeuralNetwork, squeeze_vars
+from AI import AgentMemory, ActorNeuralNetwork, CriticNeuralNetwork, squeeze_vars, state_to_tensor
 
 # Sprite groups
 all_sprites = pygame.sprite.Group()
@@ -177,9 +177,9 @@ class Organism(pygame.sprite.Sprite):
                 state_to_parse = self.prepare_state_for_AI()
                 # Decide on which action to take from the action_space based on current_state
                 # Get the distribution from the actor (predict) based on current state
-                probability_distribution = self.actorNN(state_to_parse)
+                probability_distribution = self.actorNN(state_to_tensor(state_to_parse))
                 # Get the value of the current state
-                value = self.criticNN(state_to_parse)
+                value = self.criticNN(state_to_tensor(state_to_parse))
                 action = probability_distribution.sample()
                 squeezed = squeeze_vars(probability_distribution, action, value)
                 probability = squeezed[0]

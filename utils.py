@@ -118,7 +118,7 @@ def log_tracker():
 def load_log_tracker(filename: str) -> list:
     folder = "sim_statistics_data"
     path = path = os.path.join(folder, filename)
-    with open(f'{path}/{filename}', 'r') as json_file:
+    with open(path, 'r') as json_file:
         data = json.load(json_file)
         
     return data['track_data']

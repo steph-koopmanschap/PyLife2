@@ -15,7 +15,7 @@ def load_data(filename = None):
         # Extract timestamps from filenames [:-5] removes '.json' from filename
         timestamps = [file[:-5].split("_")[2] for file in files]
         # Convert timestamps to datetime objects
-        date_objects = [datetime.strptime(timestamp, "%H:%M:%S %y-%m-%d") for timestamp in timestamps]
+        date_objects = [datetime.strptime(timestamp, "%H-%M-%S %y-%m-%d") for timestamp in timestamps]
         # Find the index of the file with the latest timestamp
         latest_index = date_objects.index(max(date_objects))
         # Get the filename of the latest file
