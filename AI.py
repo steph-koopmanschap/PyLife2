@@ -5,10 +5,6 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.distributions.categorical import Categorical
 
-epsilon = 0.2
-epislon_range = [1 - epsilon, 1 + epsilon]
-batch_size = 5
-
 def set_random_seed(seed = 73):
     T.manual_seed(seed)
     np.random.seed(seed)
@@ -16,7 +12,7 @@ def set_random_seed(seed = 73):
 
 def state_to_tensor(state):
     state = np.array(state, dtype=np.float64)
-    state = T.as_tensor(state).float()
+    state = T.tensor(state, dtype=T.float)
     return state
 
 def squeeze_vars(probability_distribution, action, critic_value):
@@ -39,7 +35,7 @@ class AgentMemory():
         self.batch_size = batch_size
 
     def generate_batches(self):
-        n_states = len(self.memory["states"]) # Current memory size
+        n_states = self.get_memory_size() # Current memory size
         batch_start = np.arange(0, n_states, self.batch_size)
         # Each index is 1 memory
         indices = np.arange(n_states, dtype=np.int64)
@@ -61,6 +57,9 @@ class AgentMemory():
     def clear_memory(self):
         for key in self.memory:
             self.memory[key] = []
+            
+    def get_memory_size(self) -> int:
+        return len(self.memory["states"])
 
 class ActorNeuralNetwork(nn.Module):
     def __init__(self, n_actions, state_dims, lr, fc1_dims=256, fc2_dims=256):

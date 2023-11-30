@@ -184,11 +184,9 @@ class Organism(pygame.sprite.Sprite):
                 critic_value = squeezed[2]
                 # Choose an action from the action space
                 chosen_action = self.action_space[action]
-                self.action_counter += 1
                 #print(f"Chosen action: {chosen_action}, from {self.params['species']} ID: {self.instance_id}")
                 #chosen_action = random.choice(self.action_space)
             #if pygame.time.get_ticks() - self.time_since_last_action > random.randint(200, 5000):
-
                 if chosen_action == "change_speed":
                     reward = self.change_speed(round(random.uniform(self.params['min_speed'], self.params['max_speed']), 2))
                 elif chosen_action == "change_direction":
@@ -204,16 +202,18 @@ class Organism(pygame.sprite.Sprite):
                 #elif chosen_action == "random_movement":
                 # Remember the state and outcome of the action just performed.
                 self.memory.store_memory(state_to_parse, action, critic_value, probability, reward, 0)
+                self.action_counter += 1
                 # Start learning every self.n_actions_trigger_learning
                 if (self.action_counter >= self.n_actions_trigger_learning):
-                    self.action_counter = 0 # Reset action acounter
                     self.learn()
-            
+                    self.action_counter = 0 # Reset action acounter
+
                 self.time_since_last_action = pygame.time.get_ticks()
     
     # Make the AI learn (train the model)
     def learn(self):
         if self.params["has_brain"]:
+            #print("Learning...")
             # First put the models into training mode
             self.actorNN.neuralNetwork.train()
             self.criticNN.neuralNetwork.train()
@@ -221,8 +221,6 @@ class Organism(pygame.sprite.Sprite):
                 # Retrieve our momery which is the data used for training
                 mem = self.memory.generate_batches()
                 batches = mem[1]
-                print("memsize: ", len(mem))
-                print("batches: ", batches)
                 states = np.array(mem[0]['states'])
                 actions = np.array(mem[0]['actions'])
                 probabilities = np.array(mem[0]['probabilities'])
@@ -245,18 +243,15 @@ class Organism(pygame.sprite.Sprite):
                 critic_outputs = T.tensor(critic_outputs).to(self.actorNN.device)
                 # Learning with mini batches
                 for batch in batches:
-                    states = T.tensor(states[batch], dtype=T.float).to(self.actorNN.device)
+                    batch_states = T.tensor(states[batch], dtype=T.float).to(self.actorNN.device)
                     old_probabilities = T.tensor(probabilities[batch]).to(self.actorNN.device)
-                    actions = T.tensor(actions[batch]).to(self.actorNN.device)
-                    
-                    #print("states", states)
-                    #print("states shape", states.shape)
-                    
-                    prob_distribution = self.actorNN(states)
-                    critic_value = self.criticNN(states)
+                    batch_actions = T.tensor(actions[batch]).to(self.actorNN.device)
+                
+                    prob_distribution = self.actorNN(batch_states) # Make prediction
+                    critic_value = self.criticNN(batch_states) # Make prediction
                     critic_value = T.squeeze(critic_value)
                         
-                    new_probabilities = prob_distribution.log_prob(actions)
+                    new_probabilities = prob_distribution.log_prob(batch_actions)
                     prob_ratio = new_probabilities.exp() / old_probabilities.exp()
                     weighted_probs = advantage[batch] * prob_ratio
                     weighted_clipped_probs = T.clamp(prob_ratio, self.policy_clip_range[0], self.policy_clip_range[1]) * advantage[batch]
