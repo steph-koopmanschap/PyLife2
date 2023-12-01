@@ -1,3 +1,5 @@
+import os
+import json
 import math
 import random
 import uuid
@@ -17,7 +19,8 @@ species = [organism['species'] for organism_definition, organism in pre_defined_
 
 class Organism(pygame.sprite.Sprite):
     # The position is the initial position where the organism is "created" or "born"
-    def __init__(self, params, position):
+    # The actor_params, and critic_params are the trained neural network parameters
+    def __init__(self, params, position, actor_params=None, critic_params=None):
         # instance_id for keeping track of this instance
         self.instance_id = str(uuid.uuid4())
         # Initial parameters of the organism are like the "genetic material" of this organism
@@ -32,9 +35,9 @@ class Organism(pygame.sprite.Sprite):
             # How far the organism can see
             "current_vision_range": random_with_bias(params["min_vision_range"], params["max_vision_range"]),
             # How fast the organism is moving. The current_energy of the organism goes down faster the faster it moves.
-            "current_speed": 0.0,
+            "current_speed": round(random.uniform(self.params['min_speed'], self.params['max_speed']), 2),
             # The current direction the organism is facing
-            "current_direction": 0.0,
+            "current_direction": round(random.uniform(0.0, 360.0), 2),
             # How much energy reserves the organism has.
             # When current energy =< 0 the organism dies. When current_energy => max_energy the organism can reproduce
             "current_energy": params["max_energy"] * 0.5,
@@ -69,8 +72,7 @@ class Organism(pygame.sprite.Sprite):
         self.closest_same_species = None
         # reproduction_pentalty is the percentage of how much energy the organism loses upon reproduction
         self.reproduction_pentalty = 0.5
-        # The available methods are all the methods of this class.
-        self.available_methods = [method for method in dir(self) if "__" not in method]
+        
         # PyGame Specific
         super().__init__()
         self.image = pygame.Surface((self.current_state["width"], self.current_state["height"]))
@@ -82,24 +84,27 @@ class Organism(pygame.sprite.Sprite):
         # Tracking for statistics
         APP['tracker'][f"total_{self.params['species']}"] += 1
         # OUTDATED ?
-        self.move_direction = random.uniform(0, 2 * math.pi)
-        self.move_timer = pygame.time.get_ticks() + random.randint(1000, 3000)
+            #self.move_direction = random.uniform(0, 2 * math.pi)
+            #self.move_timer = pygame.time.get_ticks() + random.randint(1000, 3000)
+            # The available methods are all the methods of this class.
+            #self.available_methods = [method for method in dir(self) if "__" not in method]
         # AI using PPO algorithm
         if self.params["has_brain"]:
             # The possible actions/behaviors the organism can take    
             self.action_space = [
-                "change_speed",
-                "change_direction",
-                "rest",
+                #"change_speed",
+                #"change_direction",
+                #"move_random",
                 "flee_from_predator",
-                "chase_prey"
+                "chase_prey",
+                #"rest",
                 #"reproduce",
             ]
             state_to_parse = self.prepare_state_for_AI()
             self.time_since_last_action = pygame.time.get_ticks()
             # Checkpoint files are used for saving and loading a trained organism
             self.checkpoint_file_actor = f"nnActor_{self.params['species']}_{self.instance_id}_{APP['simulation_id']}_{APP['sim_start_time_ticks']}"
-            self.checkpoint_file_actor = f"nnCritic_{self.params['species']}_{self.instance_id}_{APP['simulation_id']}_{APP['sim_start_time_ticks']}"
+            self.checkpoint_file_critic = f"nnCritic_{self.params['species']}_{self.instance_id}_{APP['simulation_id']}_{APP['sim_start_time_ticks']}"
             # HYPER PARAMATERS of the AI
             learning_rate = 0.0003
             self.gamma = 0.99
@@ -116,8 +121,33 @@ class Organism(pygame.sprite.Sprite):
             self.current_action = ""
             self.memory = AgentMemory(batch_size)
             self.actorNN = ActorNeuralNetwork(len(self.action_space), len(state_to_parse), learning_rate, neural_network_deepness, neural_network_deepness)
-            self.criticNN = CriticNeuralNetwork( len(state_to_parse), learning_rate, neural_network_deepness, neural_network_deepness)
-            
+            self.criticNN = CriticNeuralNetwork(len(state_to_parse), learning_rate, neural_network_deepness, neural_network_deepness)
+            # Load trained model parameters from a previous neural network into the current neural network.
+            if actor_params and critic_params:
+                self.actorNN.load_params_mem(actor_params)
+                self.criticNN.load_params_mem(critic_params)
+                
+    
+    # Save info of this organism to a json file
+    def save_info(self):
+            folder = "organism_info"
+            file_name = f"{self.params['species']}_{self.instance_id}_{APP['simulation_id']}_{APP['simulation_id']}.json"
+            path = os.path.join(folder, file_name)
+            info = {
+                "instance_id": self.instance_id,
+                "simulation_id": APP['simulation_id'],
+                "state": self.current_state,
+                "params": self.params
+            }
+            with open(path, 'w') as json_file:
+                json.dump(info, json_file, indent=4)
+            print(f"Saved info of {self.params['species']}.")
+    
+    # Save the learned parameters of neural network of this organism
+    def save_AI_params(self):
+        self.actorNN.save_checkpoint(self.checkpoint_file_actor)
+        self.criticNN.save_checkpoint(self.checkpoint_file_critic)
+        print(f"Saved AI learning progress of {self.params['species']}.")
     # Transforms the state of the organism into a format the AI can understand
     def prepare_state_for_AI(self):
         return [
@@ -146,6 +176,8 @@ class Organism(pygame.sprite.Sprite):
         
     # Update itself
     def update(self):
+        #pygame.draw.circle(APP['screen'], self.params['color'], (self.rect.x, self.rect.y), int(self.current_state['current_vision_range']), 2)
+        #APP['screen'].blit(self.image, self.rect)
         self.screen_wrap()
         # Reduce the food levels of the organism from hunger
         self.hunger()
@@ -194,14 +226,17 @@ class Organism(pygame.sprite.Sprite):
                     reward = self.change_speed(round(random.uniform(self.params['min_speed'], self.params['max_speed']), 2))
                 elif chosen_action == "change_direction":
                     reward = self.change_direction(round(random.uniform(0.0, 360.0), 2)) 
+                elif chosen_action == "move_random":
+                    reward = self.move_random()
                 elif chosen_action == "rest":
                     reward = self.rest()
                 elif chosen_action == "flee_from_predator":
                     reward = self.flee_from_predator()
                 elif chosen_action == "chase_prey":
                     reward = self.chase_prey()
-                #elif chosen_action == "reproduce":
-                #    reward = self.reproduce()
+                
+                # print("chosen action:", chosen_action)
+                # print("reward:", reward)
                 #elif chosen_action == "random_movement":
                 # Remember the state and outcome of the action just performed.
                 self.memory.store_memory(state_to_parse, action, critic_value, probability, reward, 0)
@@ -282,9 +317,11 @@ class Organism(pygame.sprite.Sprite):
             self.rect.left = WINDOW_WIDTH
         # TODO: Remove y-axis screen wrapping
         if self.rect.top > WINDOW_HEIGHT:
-            self.rect.bottom = 0
+            self.rect.bottom = 0 # y-axis wrapping
+            #self.change_direction(45.0) # Make the organism turn around
         elif self.rect.bottom < 0:
-            self.rect.top = WINDOW_HEIGHT
+            self.rect.top = WINDOW_HEIGHT # y-axis wrapping
+            #self.change_direction(315.0) # Make the organism turn around
             
     # The organism "sees" around itself to detect other organisms
     def vision(self):        
@@ -311,7 +348,7 @@ class Organism(pygame.sprite.Sprite):
     
     def change_direction(self, new_direction: float):
         self.current_state["current_direction"] = new_direction
-        reward = 0.0
+        reward = 1.0
         return reward
     
     def change_speed(self, new_speed: float):
@@ -319,7 +356,14 @@ class Organism(pygame.sprite.Sprite):
             self.current_state["current_speed"] = self.params['max_speed']
         else:
             self.current_state["current_speed"] = new_speed
-        reward = 0.0
+        reward = 1.0
+        return reward
+    
+    # Move in a random direction at a random speed
+    def move_random(self):
+        reward = 2.0
+        self.change_direction(round(random.uniform(0.0, 360.0), 2))
+        self.change_speed(round(random.uniform(self.params['min_speed'], self.params['max_speed']), 2))
         return reward
     
     # time_to_rest is not used (yet)
@@ -328,8 +372,8 @@ class Organism(pygame.sprite.Sprite):
         # Set reward for the AI
         reward = 0
         # Resting when low on energy is good
-        if self.current_state["current_energy"] < self.current_state["current_energy"] * 0.2:
-            reward += 10.0
+        if self.current_state["current_energy"] < self.current_state["current_energy"] * 0.1:
+            reward += 2.0
         # Resting if a prey/food is nearby is bad
         if self.current_state["closest_prey_distance"] != -1.0:
             reward -= 10.0
@@ -337,8 +381,32 @@ class Organism(pygame.sprite.Sprite):
         if self.current_state["closest_predator_distance"] != -1.0:
             reward -= 10.0 
         return reward
+    
+    def flee_from_predator(self):
+        reward = 0.0
+        # If there is a predator we need to move in the opposite direction as the predator at max speed
+        if self.closest_predator != None:
+            self.change_direction(opposite_angle(self.closest_predator.current_state['current_direction']))
+            self.change_speed(self.params['max_speed'])
+            reward = 16.0
+        # If no predator move in random direction
+        else:
+            reward = self.move_random()
+        return reward
+    
+    def chase_prey(self):
+        reward = 0.0
+        # If there is a prey we need to move in the same direction as the prey at max speed
+        if self.closest_prey != None:
+            self.change_direction(self.closest_prey.current_state['current_direction'])
+            self.change_speed(self.params['max_speed'])
+            reward = 15.0
+        # If no prey move in random direction
+        else:
+            reward = self.move_random()
+        return reward
         
-    # Move in a given direction
+    # Move in a given direction at a certein speed
     # Direction is in an angle. if radians=True then direction_angle is given in radians
     # if radians=False then direction_angle is given in degrees from 0 to 360
     def move(self, radians=True):
@@ -353,25 +421,7 @@ class Organism(pygame.sprite.Sprite):
                     dy = math.sin(direction_angle) * self.current_state["current_speed"]
                     self.rect.x += dx
                     self.rect.y += dy
-                
-    def flee_from_predator(self):
-        reward = 0.0
-        # If there is a predator we need to move in the opposite direction as the predator at max speed
-        if self.closest_predator != None:
-            self.change_direction(opposite_angle(self.closest_predator.current_state['current_direction']))
-            self.change_speed(self.params['max_speed'])
-            reward = 15.0
-        return reward
-    
-    def chase_prey(self):
-        reward = 0.0
-        # If there is a prey we need to move in the same direction as the prey at max speed
-        if self.closest_prey != None:
-            self.change_direction(self.closest_prey.current_state['current_direction'])
-            self.change_speed(self.params['max_speed'])
-            reward = 15.0
-        return reward
-            
+
     # Checks if the target is within the vision range
     def is_within_vision(self, target_sprite) -> bool:
         dx = target_sprite.rect.centerx - self.rect.centerx
@@ -453,15 +503,23 @@ class Organism(pygame.sprite.Sprite):
             else:
                 if energy_condition and time_condition:        
                     reproduce = True
-            if reproduce == True:
+            if reproduce == True: 
                 # Reproduction penalty reduces energy of current organism by a certein percentage
+                # And reduces speed to 0.0
                 self.current_state["current_energy"] *= self.reproduction_pentalty
+                self.change_speed(0.0)
                 offset = 50 # Position offset of where the new organism should be.
                 # The offspring_produced decides how many offspring are created based on a normal distribution
                 for i in range(int(self.current_state['current_offspring_produced'])):
                     new_position = [self.rect.centerx + random.randint(-(offset + self.current_state["width"]), offset + self.current_state["width"]),
                                     self.rect.centery + random.randint(-(offset + self.current_state["height"]), offset + self.current_state["height"])]
-                    new_organism = Organism(self.params, new_position)  #copy.deepcopy.self.params Should we deep copy the params?
+                    # We give the train neural network parameters to the offspring
+                    actor_params = None
+                    critic_params = None
+                    if self.params["has_brain"]:
+                        actor_params = self.actorNN.save_params_mem()
+                        critic_params = self.criticNN.save_params_mem()
+                    new_organism = Organism(self.params, new_position, actor_params, critic_params)  #copy.deepcopy.self.params Should we deep copy the params?
                     all_sprites.add(new_organism)
                 # Recalculate the offspring produced for next time
                 self.current_state["current_offspring_produced"]: random_with_bias(self.params["min_offspring_produced"], self.params["max_offspring_produced"])

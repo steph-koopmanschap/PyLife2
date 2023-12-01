@@ -2,10 +2,12 @@
 The Improved version of PyLife (now with AI)
 
 PyLife is an Ocean Food Web Simulation.
+The simulation uses PyGame for rendering, Numpy for calculations and PyTorch for neural networks.
 
-The simulation consists of sea life animals where each animals is powered by its own AI.
+The simulation consists of sea life animals where each animal is powered by its own AI.
 The AI consists of Reinforcement Learning (RL) with the Proximal Policy Optimization (PPO) algorithm implemented with PyTorch.
 Trough this the animal learns to change its behavior over time as the simulation runs.
+
 
 The animal has 2 objectives:
 1. To survive for as long as possible.
@@ -27,6 +29,26 @@ The animal has 2 objectives:
 10. If the animal reaches its lifespan it dies.
 11. Each animal has prey that it can eat. 
 12. Visa versa, each animal has predators that it can be eaten by.
+
+## Usage instructions
+
+### Install
+
+Make sure to install the requirements in `requirements.txt`. <br/>
+You can use the command `pip install -r requirements.txt` for this.
+
+### Startup
+
+To run the simulation use the command `python main.py`.  <br/>
+
+### Interactions
+
+Use the left mouse button to select an animal. <br/>
+Once an animal has been selected: <br/>
+* Press 'S' to save the training process of the animal's neural network to a file. <br/>
+* Press 'I' to save the information of that animal to a file. <br/>
+
+Press 'L' to force log current statistics to the statistics file (the normal rate is to log every 2.5 seconds)
 
 ## The food web and animals
 
@@ -103,8 +125,7 @@ However the simulation has been tested to run on a Intel Core i5 CPU where it ru
 The biggest performance hog is the amount of plankton in the simulation. <br/>
 While the plankton does not have any AI, because it is a plant without behhavior, as a primary producer the amount of plankton needs to be at least 1000 or more for the ecosystem to be stable.
 
-## Usage instructions
+## Contributing to PyLife
 
-To run the simulation use the command `python main.py`.  <br/>
-Make sure to install the requirements in `requirements.txt`. <br/>
-The simulation uses PyGame for rendering, Numpy for calculations and PyTorch for neural networks.
+Because this is a free open souce project anyone is allowed to contribute to PyLife. <br/>
+To contribute you may contact me (the project creator) on Discord with username: `greylien`

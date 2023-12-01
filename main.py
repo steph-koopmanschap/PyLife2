@@ -7,21 +7,27 @@ import numpy as np
 #from pygame.math import Vector2
 from constants import COLORS, FPS, WINDOW_WIDTH, WINDOW_HEIGHT
 from models import all_sprites, species
+from environment import Environment
 from generate_world import generate_world
 from utils import update_tracker, log_tracker
 from globals import APP
 
 rng = np.random.default_rng() # Numpy's random number generator
 pygame.init()
-# Create the program window
-window = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+environment = Environment() # Create the simulation's environment
+# Create the program window and screen(drawing surface)
+APP['screen'] = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 pygame.display.set_caption("PyLife2")
 
 # Clear the screen
 def clear_screen():
-    window.fill(COLORS["BLACK"])
-    #window.fill((4, 217, 255)) # Light blue
-    #window.fill((255, 255, 255)) # White
+    # Night time
+    if environment.current_environment['is_night'] == True:
+        APP['screen'].fill(COLORS["BLACK"])
+    # Day time
+    else:
+        APP['screen'].fill((4, 217, 255)) # Light blue
+    #screen.fill((255, 255, 255)) # White
     
 def purge(purge_percentage):    
     # Check which species is the most abundant
@@ -56,14 +62,36 @@ def handle_input(event):
             update_tracker(species, all_sprites)
             log_tracker()
             print("Force logged to file.")
+        # 'S' key press.
+        if event.key == pygame.K_s:
+            if APP['selected_organism']:
+                APP['selected_organism'].save_AI_params()
+        # 'I' key press
+        if event.key == pygame.K_i:
+            if APP['selected_organism']:
+                APP['selected_organism'].save_info()
+    # Left mouse button clicked
+    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+        # Select an organism  
+        mouse_pos = pygame.mouse.get_pos()
+        clicked_organisms = [organism for organism in all_sprites if organism.rect.collidepoint(mouse_pos)]
+        if clicked_organisms and len(clicked_organisms) > 0:
+            APP['selected_organism'] = clicked_organisms[0] 
+            print(f"Selected organism: {APP['selected_organism'].params['species']} - {APP['selected_organism'].instance_id}")
+            print("Press 'S' to save the AI trained model of this organism.")
+            print("Press 'I' to save the organism's state and 'dna'.")
+        
 
 # Update simulation logic here
-def update():
-    all_sprites.update()
+def update(now):
+    all_sprites.update() # Update the organisms / sprites
+    environment.update(now) # Update the environment
 
-# Draw simulation elements here
+# Draw simulation elements here and rendering logic
 def draw():
-    all_sprites.draw(window)
+    all_sprites.draw(APP['screen'])
+    # Update the display
+    pygame.display.update()
 
 # Main program loop
 def main_loop():
@@ -81,14 +109,12 @@ def main_loop():
     while True:
         for event in pygame.event.get():
             handle_input(event)
+        now = pygame.time.get_ticks()
 
-        update()
+        update(now)
         clear_screen()
         draw()
-
-        # Update the display
-        pygame.display.update()
-        clock.tick(FPS)
+        
         # Get the current frame rate
         current_fps = clock.get_fps()
         # If the frame rate drops we will kill off purge_percentage of the most abudant species
@@ -97,13 +123,15 @@ def main_loop():
             purge(purge_percentage)
             time_since_last_purge = pygame.time.get_ticks()
                 
-        # Log statistics to file every 5 seconds
-        elapsed_time = pygame.time.get_ticks() - time_since_last_logging
+        # Log statistics to file every APP['logging_rate'] seconds
+        elapsed_time = now - time_since_last_logging
         if elapsed_time >= APP['logging_rate']:
             update_tracker(species, all_sprites)
             log_tracker()
             # Update the time_since_last_logging for the next interval
             time_since_last_logging = pygame.time.get_ticks()
+            
+        clock.tick(FPS)
 
 # Start the simulation
 def start():

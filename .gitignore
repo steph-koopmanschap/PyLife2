@@ -1,5 +1,6 @@
 # App specific
 sim_statistics_data/*.json
+organism_info/*.json
 plot_results/*.png
 tmp.py
 ai_checkpoints/*

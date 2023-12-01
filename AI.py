@@ -1,4 +1,5 @@
 import os
+import io
 import random
 import numpy as np
 import torch as T
@@ -93,6 +94,16 @@ class ActorNeuralNetwork(nn.Module):
     def load_checkpoint(self, checkpoint_file):
         path = os.path.join(self.checkpoint_folder, checkpoint_file)
         self.load_state_dict(T.load(path))
+        
+    # The same as save_checkpoint, but retuns the data in-memory instead of to a file.
+    def save_params_mem(self):
+        memory_buffer = io.BytesIO()
+        T.save(self.state_dict(), memory_buffer)
+        
+    # The same as load_checkpoint, but retuns the data in-memory instead of to a file.
+    def load_params_mem(self, memory_buffer):
+        memory_buffer.seek(0) # Move the read/write head of the in-memory file to the start (0)
+        self.load_state_dict(T.load(memory_buffer))
 
 class CriticNeuralNetwork(nn.Module):
     def __init__(self, state_dims, lr, fc1_dims=256, fc2_dims=256):
@@ -122,4 +133,15 @@ class CriticNeuralNetwork(nn.Module):
     def load_checkpoint(self, checkpoint_file):
         path = os.path.join(self.checkpoint_folder, checkpoint_file)
         self.load_state_dict(T.load(path))
+        
+    # The same as save_checkpoint, but retuns the data in-memory instead of to a file.
+    def save_params_mem(self):
+        memory_buffer = io.BytesIO()
+        T.save(self.state_dict(), memory_buffer)
+        return memory_buffer
+        
+    # The same as load_checkpoint, but retuns the data in-memory instead of to a file.
+    def load_params_mem(self, memory_buffer):
+        memory_buffer.seek(0) # Move the read/write head of the in-memory file to the start (0)
+        self.load_state_dict(T.load(memory_buffer))
 
